@@ -1,0 +1,85 @@
+###################################
+centose
+###################################
+1. yum install mod_security mod_evasive
+2. ls /etc/httpd/conf.d смотреть что бы были конфиги
+3. Если что можно добавить в httpd.conf
+
+LoadModule security2_module modules/mod_security2.so
+LoadModule evasive20_module modules/mod_evasive20.so
+
+4. service httpd restart
+5. Настройка mod_security
+
+mkdir /etc/httpd/crs
+cd /etc/httpd/crs
+wget https://github.com/SpiderLabs/owasp-modsecurity-crs/tarball/master
+tar xzf master
+mv SpiderLabs-owasp-modsecurity-crs-ebe8790 owasp-modsecurity-crs  - имя проверь может быть другое
+cd /etc/httpd/crs/owasp-modsecurity-crs
+cp modsecurity_crs_10_setup.conf.example modsecurity_crs_10_setup.conf
+
+6. в /etc/httpd/conf/httpd.conf вставляем
+
+<IfModule security2_module>
+Include crs/owasp-modsecurity-crs/modsecurity_crs_10_setup.conf
+Include crs/owasp-modsecurity-crs/base_rules/*.conf
+</IfModule>
+
+7. nano  /etc/httpd/modsecurity.d/webware.con
+
+<IfModule mod_security2.c>
+SecRuleEngine On
+SecRequestBodyAccess On
+SecResponseBodyAccess On
+SecResponseBodyMimeType text/plain text/html text/xml application/octet-stream
+SecDataDir /tmp
+</IfModule>
+
+SecRuleEngine On: Использовать OWASP CRS для выявления и блокировки вредоносных атак.
+
+SecRequestBodyAccess On: Включить проверку данных, передаваемых в теле запроса 
+
+SecResponseBodyAccess On: Буфер ответа тел (только если MIME тип ответа соответствует 
+списку, настроенному с SecResponseBodyMimeType).
+
+SecResponseBodyMimeType text/plain text/html text/xml application/octet-stream: Настраивает, к
+акие MIME типы будут рассматриваться для буфера тела ответа. Если вы не знакомы с типами MIME
+или не уверены об их именах или использовании, вы можете проверить веб-сайт Internet Assigned 
+Numbers Authority (IANA).
+
+SecDataDir /tmp: Путь, где должны быть сохранены постоянные данные
+(например, данные IP адреса, данные сессии и т. д.). Здесь «постоянные» используется в том 
+смысле, что они хранятся не в оперативной памяти, а на жёстком диске.
+
+8. Настройка mod_evasive
+9.nano /etc/httpd/conf.d/mod_evasive.conf
+
+<IfModule mod_evasive20.c>
+DOSHashTableSize 3097
+DOSPageCount 12
+DOSSiteCount 15
+DOSPageInterval 10
+DOSSiteInterval 10
+DOSBlockingPeriod 100
+</IfModule>
+
+DOSHashTableSize: Размер хэш таблицы, которая используется для хранения трэка 
+активности на один IP. Увеличение этого числа обеспечит более быстрый поиск сайтов, 
+которые клиент посетил в прошлом, но может повлиять на общую производительность, 
+если оно слишком велико.
+
+DOSPageCount: Числоо идентичных запросов к определённому URI (например, к файлу, который 
+обслуживает Apache), которые посетитель может сделать через интервал DOSPageInterval.
+
+DOSSiteCount: похоже на DOSPageCount, но относится к тому, как много общих запросов 
+может быть сделано к сайту за интервал DOSPageCount.
+
+DOSBlockingPeriod: Если посетитель превысил лимиты, установленные DOSSPageCount или 
+DOSSiteCount, он/она будут занесены в чёрный список на период времени DOSBlockingPeriod. 
+Во время этого интервала, любой запрос, приходящий от него/неё, будет возвращён с 
+
+Дополнительня ифа смотри тут http://webware.biz/?p=2753
+
+**********************************************************************************************
+
